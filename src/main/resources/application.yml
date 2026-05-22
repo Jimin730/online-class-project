@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: example
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/exampleDB
+    username: myuser
+    password: secret
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+    show-sql: true
+
+  docker:
+    compose:
+      lifecycle-management: start_and_stop
+
+server:
+  port: 8080
