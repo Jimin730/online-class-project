@@ -3,7 +3,9 @@ package com.example.course.domain;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import com.example.course.exception.CourseError;
 import com.example.global.domain.BaseEntity;
+import com.example.global.exception.DomainException;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -73,5 +75,19 @@ public class Course extends BaseEntity {
 		course.endDate = endDate;
 		course.status = CourseStatus.DRAFT;
 		return course;
+	}
+
+	public void open() {
+		if(this.status == CourseStatus.OPEN) {
+			throw new DomainException(CourseError.ALREADY_OPENED);
+		}
+		this.status = CourseStatus.OPEN;
+	}
+
+	public void close() {
+		if(this.status != CourseStatus.OPEN) {
+			throw new DomainException(CourseError.CANNOT_CLOSED);
+		}
+		this.status = CourseStatus.CLOSED;
 	}
 }
