@@ -2,7 +2,9 @@ package com.example.enrollment.domain;
 
 import java.time.LocalDateTime;
 
+import com.example.enrollment.exception.EnrollmentError;
 import com.example.global.domain.BaseEntity;
+import com.example.global.exception.DomainException;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -51,5 +53,21 @@ public class Enrollment extends BaseEntity {
 		enrollment.status = EnrollmentStatus.PENDING;
 		enrollment.enrolledAt = LocalDateTime.now();
 		return enrollment;
+	}
+
+	public void confirm() {
+		if(this.status != EnrollmentStatus.PENDING) {
+			throw new DomainException(EnrollmentError.CANNOT_CONFIRM);
+		}
+		this.status = EnrollmentStatus.CONFIRMED;
+		this.confirmedAt = LocalDateTime.now();
+	}
+
+	public void cancel() {
+		if(this.status == EnrollmentStatus.CANCELLED) {
+			throw new DomainException(EnrollmentError.CANNOT_CANCEL);
+		}
+		this.status = EnrollmentStatus.CANCELLED;
+		this.cancelledAt = LocalDateTime.now();
 	}
 }
