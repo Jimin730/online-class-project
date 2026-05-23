@@ -21,6 +21,7 @@ import com.example.course.dto.response.CourseResponse;
 import com.example.course.exception.CourseError;
 import com.example.course.repository.CourseRepository;
 import com.example.global.exception.BusinessException;
+import com.example.global.exception.DomainException;
 import com.example.user.domain.Role;
 import com.example.user.domain.User;
 import com.example.user.exception.UserError;
@@ -195,5 +196,194 @@ class CourseServiceTest {
 		}
 	}
 
+	@Nested
+	@DisplayName("강의 모집 시작 상태 변경 테스트")
+	class ChangeCourseStatusTest {
 
+		@Test
+		@DisplayName("DRAFT 상태 강의를 OPEN에 성공한다")
+		void openCourse_success() {
+			// given
+			Course course = courseRepository.save(Course.create(
+				teacher.getId(),
+				"스프링 부트 입문",
+				"설명",
+				new BigDecimal("50000"),
+				30,
+				LocalDate.of(2026, 6, 1),
+				LocalDate.of(2026, 8, 31)
+			));
+
+			// when
+			courseService.openCourse(teacher.getId(), course.getId());
+
+			// then
+			Course updatedCourse = courseRepository.findById(course.getId()).orElseThrow();
+			assertThat(updatedCourse.getStatus()).isEqualTo(CourseStatus.OPEN);
+		}
+
+		@Test
+		@DisplayName("이미 모집중인 강의를 다시 OPEN 시 실패한다")
+		void openCourse_fail_alreadyOpened() {
+			// given
+			Course course = courseRepository.save(Course.create(
+				teacher.getId(),
+				"스프링 부트 입문",
+				"설명",
+				new BigDecimal("50000"),
+				30,
+				LocalDate.of(2026, 6, 1),
+				LocalDate.of(2026, 8, 31)
+			));
+			course.open();
+
+			// when & then
+			assertThatThrownBy(() -> courseService.openCourse(teacher.getId(), course.getId()))
+				.isInstanceOf(DomainException.class)
+				.hasFieldOrPropertyWithValue("errorCode", CourseError.ALREADY_OPENED);
+		}
+
+		@Test
+		@DisplayName("강의 소유자가 아닌 강사가 OPEN 시 실패한다")
+		void openCourse_fail_notOwner() {
+			// given
+			Course course = courseRepository.save(Course.create(
+				teacher.getId(),
+				"스프링 부트 입문",
+				"설명",
+				new BigDecimal("50000"),
+				30,
+				LocalDate.of(2026, 6, 1),
+				LocalDate.of(2026, 8, 31)
+			));
+			User otherTeacher = userRepository.save(User.create("박선생", "teacher2@email.com", Role.TEACHER));
+
+			// when & then
+			assertThatThrownBy(() -> courseService.openCourse(otherTeacher.getId(), course.getId()))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", CourseError.NOT_COURSE_OWNER);
+
+			Course unchangedCourse = courseRepository.findById(course.getId()).orElseThrow();
+			assertThat(unchangedCourse.getStatus()).isEqualTo(CourseStatus.DRAFT);
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 강의 ID로 모집 시작 시 실패한다")
+		void openCourse_fail_notFound() {
+			// given
+			Long nonExistentCourseId = 999L;
+
+			// when & then
+			assertThatThrownBy(() -> courseService.openCourse(teacher.getId(), nonExistentCourseId))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", CourseError.NOT_FOUND_COURSE);
+		}
+	}
+
+	@Nested
+	@DisplayName("강의 모집 마감 상태 변경 테스트")
+	class CloseCourseTest {
+
+		@Test
+		@DisplayName("OPEN 상태 강의를 모집 마감에 성공한다")
+		void closeCourse_success() {
+			// given
+			Course course = courseRepository.save(Course.create(
+				teacher.getId(),
+				"스프링 부트 입문",
+				"설명",
+				new BigDecimal("50000"),
+				30,
+				LocalDate.of(2026, 6, 1),
+				LocalDate.of(2026, 8, 31)
+			));
+			course.open();
+
+			// when
+			courseService.closeCourse(teacher.getId(), course.getId());
+
+			// then
+			Course updatedCourse = courseRepository.findById(course.getId()).orElseThrow();
+			assertThat(updatedCourse.getStatus()).isEqualTo(CourseStatus.CLOSED);
+		}
+
+		@Test
+		@DisplayName("DRAFT 상태 강의를 모집 마감 시 실패한다")
+		void closeCourse_fail_fromDraft() {
+			// given
+			Course course = courseRepository.save(Course.create(
+				teacher.getId(),
+				"스프링 부트 입문",
+				"설명",
+				new BigDecimal("50000"),
+				30,
+				LocalDate.of(2026, 6, 1),
+				LocalDate.of(2026, 8, 31)
+			));
+
+			// when & then
+			assertThatThrownBy(() -> courseService.closeCourse(teacher.getId(), course.getId()))
+				.isInstanceOf(DomainException.class)
+				.hasFieldOrPropertyWithValue("errorCode", CourseError.CANNOT_CLOSED);
+		}
+
+		@Test
+		@DisplayName("이미 마감된 강의를 다시 마감 시 실패한다")
+		void closeCourse_fail_alreadyClosed() {
+			// given
+			Course course = courseRepository.save(Course.create(
+				teacher.getId(),
+				"스프링 부트 입문",
+				"설명",
+				new BigDecimal("50000"),
+				30,
+				LocalDate.of(2026, 6, 1),
+				LocalDate.of(2026, 8, 31)
+			));
+			course.open();
+			course.close();
+
+			// when & then
+			assertThatThrownBy(() -> courseService.closeCourse(teacher.getId(), course.getId()))
+				.isInstanceOf(DomainException.class)
+				.hasFieldOrPropertyWithValue("errorCode", CourseError.CANNOT_CLOSED);
+		}
+
+		@Test
+		@DisplayName("강의 소유자가 아닌 강사가 모집 마감 시 실패한다")
+		void closeCourse_fail_notOwner() {
+			// given
+			Course course = courseRepository.save(Course.create(
+				teacher.getId(),
+				"스프링 부트 입문",
+				"설명",
+				new BigDecimal("50000"),
+				30,
+				LocalDate.of(2026, 6, 1),
+				LocalDate.of(2026, 8, 31)
+			));
+			course.open();
+			User otherTeacher = userRepository.save(User.create("박선생", "teacher2@email.com", Role.TEACHER));
+
+			// when & then
+			assertThatThrownBy(() -> courseService.closeCourse(otherTeacher.getId(), course.getId()))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", CourseError.NOT_COURSE_OWNER);
+
+			Course unchangedCourse = courseRepository.findById(course.getId()).orElseThrow();
+			assertThat(unchangedCourse.getStatus()).isEqualTo(CourseStatus.OPEN);
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 강의 ID로 모집 마감 시 실패한다")
+		void closeCourse_fail_notFound() {
+			// given
+			Long nonExistentCourseId = 999L;
+
+			// when & then
+			assertThatThrownBy(() -> courseService.closeCourse(teacher.getId(), nonExistentCourseId))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", CourseError.NOT_FOUND_COURSE);
+		}
+	}
 }
