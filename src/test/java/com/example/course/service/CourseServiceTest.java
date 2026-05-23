@@ -8,11 +8,13 @@ import java.time.LocalDate;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.course.domain.Course;
 import com.example.course.domain.CourseStatus;
 import com.example.course.dto.request.CourseCreateRequest;
 import com.example.course.dto.response.CourseResponse;
@@ -45,99 +47,153 @@ class CourseServiceTest {
 		userRepository.save(teacher);
 	}
 
-	@Test
-	@DisplayName("강의 등록에 성공한다")
-	void createCourse_success() {
-		// given
-		CourseCreateRequest request = new CourseCreateRequest(
-			"스프링 부트 입문",
-			"스프링 부트 백엔드 개발 강의입니다.",
-			new BigDecimal("50000"),
-			30,
-			LocalDate.of(2026, 6, 1),
-			LocalDate.of(2026, 8, 31)
-		);
+	@Nested
+	@DisplayName("강의 등록 테스트")
+	class CreateCourseTest {
 
-		// when
-		CourseResponse response = courseService.createCourse(teacher.getId(), request);
+		@Test
+		@DisplayName("강의 등록에 성공한다")
+		void createCourse_success() {
+			// given
+			CourseCreateRequest request = new CourseCreateRequest(
+				"스프링 부트 입문",
+				"스프링 부트 백엔드 개발 강의입니다.",
+				new BigDecimal("50000"),
+				30,
+				LocalDate.of(2026, 6, 1),
+				LocalDate.of(2026, 8, 31)
+			);
 
-		// then
-		assertThat(response.id()).isNotNull();
-		assertThat(response.teacherId()).isEqualTo(teacher.getId());
-		assertThat(response.title()).isEqualTo("스프링 부트 입문");
-		assertThat(response.description()).isEqualTo("스프링 부트 백엔드 개발 강의입니다.");
-		assertThat(response.price()).isEqualByComparingTo("50000");
-		assertThat(response.capacity()).isEqualTo(30);
-		assertThat(response.enrolledCount()).isZero();
-		assertThat(response.startDate()).isEqualTo(LocalDate.of(2026, 6, 1));
-		assertThat(response.endDate()).isEqualTo(LocalDate.of(2026, 8, 31));
-		assertThat(response.status()).isEqualTo(CourseStatus.DRAFT);
+			// when
+			CourseResponse response = courseService.createCourse(teacher.getId(), request);
 
-		assertThat(courseRepository.count()).isOne();
+			// then
+			assertThat(response.id()).isNotNull();
+			assertThat(response.teacherId()).isEqualTo(teacher.getId());
+			assertThat(response.title()).isEqualTo("스프링 부트 입문");
+			assertThat(response.description()).isEqualTo("스프링 부트 백엔드 개발 강의입니다.");
+			assertThat(response.price()).isEqualByComparingTo("50000");
+			assertThat(response.capacity()).isEqualTo(30);
+			assertThat(response.enrolledCount()).isZero();
+			assertThat(response.startDate()).isEqualTo(LocalDate.of(2026, 6, 1));
+			assertThat(response.endDate()).isEqualTo(LocalDate.of(2026, 8, 31));
+			assertThat(response.status()).isEqualTo(CourseStatus.DRAFT);
+
+			assertThat(courseRepository.count()).isOne();
+		}
+
+		@Test
+		@DisplayName("종료일이 시작일보다 앞서면 강의 등록에 실패한다")
+		void createCourse_fail_invalidPeriod() {
+			// given
+			CourseCreateRequest request = new CourseCreateRequest(
+				"잘못된 기간 강의",
+				"기간 검증 테스트",
+				new BigDecimal("30000"),
+				20,
+				LocalDate.of(2026, 9, 1),
+				LocalDate.of(2026, 7, 1)
+			);
+
+			// when & then
+			assertThatThrownBy(() -> courseService.createCourse(teacher.getId(), request))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", CourseError.INVALID_PERIOD);
+
+			assertThat(courseRepository.count()).isZero();
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 강사 ID로 강의 등록 시 실패한다")
+		void createCourse_fail_userNotFound() {
+			// given
+			Long nonExistentTeacherId = 999L;
+			CourseCreateRequest request = new CourseCreateRequest(
+				"존재하지 않는 강사 강의",
+				"존재하지 않는 강사로 등록 시도",
+				new BigDecimal("50000"),
+				30,
+				LocalDate.of(2026, 6, 1),
+				LocalDate.of(2026, 8, 31)
+			);
+
+			// when & then
+			assertThatThrownBy(() -> courseService.createCourse(nonExistentTeacherId, request))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", UserError.USER_NOT_FOUND);
+
+			assertThat(courseRepository.count()).isZero();
+		}
+
+		@Test
+		@DisplayName("강사 권한이 없는 사용자가 강의 등록 시 실패한다")
+		void createCourse_fail_notTeacher() {
+			// given
+			User student = userRepository.save(User.create("홍학생", "student1@email.com", Role.STUDENT));
+			CourseCreateRequest request = new CourseCreateRequest(
+				"학생이 등록 시도하는 강의",
+				"학생 권한으로 등록 시도",
+				new BigDecimal("50000"),
+				30,
+				LocalDate.of(2026, 6, 1),
+				LocalDate.of(2026, 8, 31)
+			);
+
+			// when & then
+			assertThatThrownBy(() -> courseService.createCourse(student.getId(), request))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", UserError.FORBIDDEN_TEACHER_ONLY);
+
+			assertThat(courseRepository.count()).isZero();
+		}
 	}
 
-	@Test
-	@DisplayName("종료일이 시작일보다 앞서면 강의 등록에 실패한다")
-	void createCourse_fail_invalidPeriod() {
-		// given
-		CourseCreateRequest request = new CourseCreateRequest(
-			"잘못된 기간 강의",
-			"기간 검증 테스트",
-			new BigDecimal("30000"),
-			20,
-			LocalDate.of(2026, 9, 1),
-			LocalDate.of(2026, 7, 1)
-		);
+	@Nested
+	@DisplayName("강의 상세 조회 테스트")
+	class GetCourseTest {
 
-		// when & then
-		assertThatThrownBy(() -> courseService.createCourse(teacher.getId(), request))
-			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", CourseError.INVALID_PERIOD);
+		@Test
+		@DisplayName("강의 상세 조회에 성공한다")
+		void getCourse_success() {
+			// given
+			Course course = courseRepository.save(Course.create(
+				teacher.getId(),
+				"스프링 부트 입문",
+				"스프링 부트 백엔드 개발 강의입니다.",
+				new BigDecimal("50000"),
+				30,
+				LocalDate.of(2026, 6, 1),
+				LocalDate.of(2026, 8, 31)
+			));
 
-		assertThat(courseRepository.count()).isZero();
+			// when
+			CourseResponse response = courseService.getCourse(course.getId());
+
+			// then
+			assertThat(response.id()).isEqualTo(course.getId());
+			assertThat(response.teacherId()).isEqualTo(teacher.getId());
+			assertThat(response.title()).isEqualTo("스프링 부트 입문");
+			assertThat(response.description()).isEqualTo("스프링 부트 백엔드 개발 강의입니다.");
+			assertThat(response.price()).isEqualByComparingTo("50000");
+			assertThat(response.capacity()).isEqualTo(30);
+			assertThat(response.enrolledCount()).isZero();
+			assertThat(response.startDate()).isEqualTo(LocalDate.of(2026, 6, 1));
+			assertThat(response.endDate()).isEqualTo(LocalDate.of(2026, 8, 31));
+			assertThat(response.status()).isEqualTo(CourseStatus.DRAFT);
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 강의 ID로 조회 시 실패한다")
+		void getCourse_fail_notFound() {
+			// given
+			Long nonExistentCourseId = 999L;
+
+			// when & then
+			assertThatThrownBy(() -> courseService.getCourse(nonExistentCourseId))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", CourseError.NOT_FOUND_COURSE);
+		}
 	}
 
-	@Test
-	@DisplayName("존재하지 않는 강사 ID로 강의 등록 시 실패한다")
-	void createCourse_fail_userNotFound() {
-		// given
-		Long nonExistentTeacherId = 999L;
-		CourseCreateRequest request = new CourseCreateRequest(
-			"존재하지 않는 강사 강의",
-			"존재하지 않는 강사로 등록 시도",
-			new BigDecimal("50000"),
-			30,
-			LocalDate.of(2026, 6, 1),
-			LocalDate.of(2026, 8, 31)
-		);
 
-		// when & then
-		assertThatThrownBy(() -> courseService.createCourse(nonExistentTeacherId, request))
-			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", UserError.USER_NOT_FOUND);
-
-		assertThat(courseRepository.count()).isZero();
-	}
-
-	@Test
-	@DisplayName("강사 권한이 없는 사용자가 강의 등록 시 실패한다")
-	void createCourse_fail_notTeacher() {
-		// given
-		User student = userRepository.save(User.create("홍학생", "student1@email.com", Role.STUDENT));
-		CourseCreateRequest request = new CourseCreateRequest(
-			"학생이 등록 시도하는 강의",
-			"학생 권한으로 등록 시도",
-			new BigDecimal("50000"),
-			30,
-			LocalDate.of(2026, 6, 1),
-			LocalDate.of(2026, 8, 31)
-		);
-
-		// when & then
-		assertThatThrownBy(() -> courseService.createCourse(student.getId(), request))
-			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", UserError.FORBIDDEN_TEACHER_ONLY);
-
-		assertThat(courseRepository.count()).isZero();
-	}
 }
