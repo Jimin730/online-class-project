@@ -41,4 +41,22 @@ public class CourseController {
 		CourseResponse response = courseService.getCourse(courseId);
 		return ResponseEntity.ok(response);
 	}
+
+	@PostMapping("/{courseId}/open")
+	public ResponseEntity<Void> open(
+		@RequestHeader("X-User-Id") Long teacherId,
+		@PathVariable Long courseId
+	) {
+		courseService.openCourse(teacherId, courseId);
+		return ResponseEntity.noContent().build();
+	}
+
+	@PostMapping("/{courseId}/close")
+	public ResponseEntity<Void> close(
+		@RequestHeader("X-User-Id") Long teacherId,
+		@PathVariable Long courseId
+	) {
+		courseService.closeCourse(teacherId, courseId);
+		return ResponseEntity.noContent().build();
+	}
 }

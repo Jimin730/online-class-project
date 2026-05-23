@@ -56,4 +56,27 @@ public class CourseService {
 
 		return CourseResponse.from(course);
 	}
+
+	@Transactional
+	public void openCourse(Long teacherId, Long courseId) {
+		Course course = findCourseOwnedBy(courseId, teacherId);
+		course.open();
+	}
+
+	@Transactional
+	public void closeCourse(Long teacherId, Long courseId) {
+		Course course = findCourseOwnedBy(courseId, teacherId);
+		course.close();
+	}
+
+	private Course findCourseOwnedBy(Long courseId, Long teacherId) {
+		Course course = courseRepository.findById(courseId)
+			.orElseThrow(() -> new BusinessException(CourseError.NOT_FOUND_COURSE));
+
+		if (!course.getTeacherId().equals(teacherId)) {
+			throw new BusinessException(CourseError.NOT_COURSE_OWNER);
+		}
+		return course;
+	}
+
 }
