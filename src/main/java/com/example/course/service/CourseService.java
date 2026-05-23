@@ -48,4 +48,12 @@ public class CourseService {
 
 		return CourseResponse.from(courseRepository.save(course));
 	}
+
+	@Transactional(readOnly = true)
+	public CourseResponse getCourse(Long courseId) {
+		Course course = courseRepository.findById(courseId)
+			.orElseThrow(() -> new BusinessException(CourseError.NOT_FOUND_COURSE));
+
+		return CourseResponse.from(course);
+	}
 }
