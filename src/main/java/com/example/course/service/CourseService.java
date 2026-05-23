@@ -18,12 +18,12 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class CourseService {
 
 	private final CourseRepository courseRepository;
 	private final UserRepository userRepository;
 
-	@Transactional
 	public Long createCourse(Long teacherId, CourseCreateRequest request) {
 		User teacher = userRepository.findById(teacherId)
 			.orElseThrow(() -> new BusinessException(UserError.USER_NOT_FOUND));
@@ -57,13 +57,11 @@ public class CourseService {
 		return CourseResponse.from(course);
 	}
 
-	@Transactional
 	public void openCourse(Long teacherId, Long courseId) {
 		Course course = findCourseOwnedBy(courseId, teacherId);
 		course.open();
 	}
 
-	@Transactional
 	public void closeCourse(Long teacherId, Long courseId) {
 		Course course = findCourseOwnedBy(courseId, teacherId);
 		course.close();
