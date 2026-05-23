@@ -65,21 +65,21 @@ class CourseServiceTest {
 			);
 
 			// when
-			CourseResponse response = courseService.createCourse(teacher.getId(), request);
+			Long courseId = courseService.createCourse(teacher.getId(), request);
 
 			// then
-			assertThat(response.id()).isNotNull();
-			assertThat(response.teacherId()).isEqualTo(teacher.getId());
-			assertThat(response.title()).isEqualTo("스프링 부트 입문");
-			assertThat(response.description()).isEqualTo("스프링 부트 백엔드 개발 강의입니다.");
-			assertThat(response.price()).isEqualByComparingTo("50000");
-			assertThat(response.capacity()).isEqualTo(30);
-			assertThat(response.enrolledCount()).isZero();
-			assertThat(response.startDate()).isEqualTo(LocalDate.of(2026, 6, 1));
-			assertThat(response.endDate()).isEqualTo(LocalDate.of(2026, 8, 31));
-			assertThat(response.status()).isEqualTo(CourseStatus.DRAFT);
+			assertThat(courseId).isNotNull();
 
-			assertThat(courseRepository.count()).isOne();
+			Course savedCourse = courseRepository.findById(courseId).orElseThrow();
+			assertThat(savedCourse.getTeacherId()).isEqualTo(teacher.getId());
+			assertThat(savedCourse.getTitle()).isEqualTo("스프링 부트 입문");
+			assertThat(savedCourse.getDescription()).isEqualTo("스프링 부트 백엔드 개발 강의입니다.");
+			assertThat(savedCourse.getPrice()).isEqualByComparingTo("50000");
+			assertThat(savedCourse.getCapacity()).isEqualTo(30);
+			assertThat(savedCourse.getEnrolledCount()).isZero();
+			assertThat(savedCourse.getStartDate()).isEqualTo(LocalDate.of(2026, 6, 1));
+			assertThat(savedCourse.getEndDate()).isEqualTo(LocalDate.of(2026, 8, 31));
+			assertThat(savedCourse.getStatus()).isEqualTo(CourseStatus.DRAFT);
 		}
 
 		@Test

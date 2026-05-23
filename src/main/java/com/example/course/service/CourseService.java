@@ -24,7 +24,7 @@ public class CourseService {
 	private final UserRepository userRepository;
 
 	@Transactional
-	public CourseResponse createCourse(Long teacherId, CourseCreateRequest request) {
+	public Long createCourse(Long teacherId, CourseCreateRequest request) {
 		User teacher = userRepository.findById(teacherId)
 			.orElseThrow(() -> new BusinessException(UserError.USER_NOT_FOUND));
 
@@ -46,7 +46,7 @@ public class CourseService {
 			request.endDate()
 		);
 
-		return CourseResponse.from(courseRepository.save(course));
+		return courseRepository.save(course).getId();
 	}
 
 	@Transactional(readOnly = true)

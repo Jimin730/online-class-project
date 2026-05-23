@@ -1,6 +1,7 @@
 package com.example.course.controller;
 
-import org.springframework.http.HttpStatus;
+import java.net.URI;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,12 +26,14 @@ public class CourseController {
 	private final CourseService courseService;
 
 	@PostMapping
-	public ResponseEntity<CourseResponse> create(
+	public ResponseEntity<Void> create(
 		@RequestHeader("X-User-Id") Long teacherId,
 		@Valid @RequestBody CourseCreateRequest request
 	) {
-		CourseResponse response = courseService.createCourse(teacherId, request);
-		return ResponseEntity.status(HttpStatus.CREATED).body(response);
+		Long courseId = courseService.createCourse(teacherId, request);
+		return ResponseEntity
+			.created(URI.create("/api/courses/" + courseId))
+			.build();
 	}
 
 	@GetMapping("/{courseId}")
