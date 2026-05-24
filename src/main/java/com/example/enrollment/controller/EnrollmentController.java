@@ -37,7 +37,7 @@ public class EnrollmentController {
 		@RequestHeader("X-User-Id") Long studentId,
 		@PathVariable Long enrollmentId
 	) {
-		enrollmentService.confirm(studentId, enrollmentId);
+		enrollmentService.confirmEnrollment(studentId, enrollmentId);
 		return ResponseEntity.noContent().build();
 	}
 

@@ -49,7 +49,7 @@ public class EnrollmentService {
 		return EnrollmentCreateResponse.from(enrollment);
 	}
 
-	public void confirm(Long studentId, Long enrollmentId) {
+	public void confirmEnrollment(Long studentId, Long enrollmentId) {
 		Enrollment enrollment = findOwnedBy(studentId, enrollmentId);
 		enrollment.confirm();
 	}

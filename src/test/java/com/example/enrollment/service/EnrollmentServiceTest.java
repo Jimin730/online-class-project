@@ -153,7 +153,7 @@ class EnrollmentServiceTest {
 			);
 
 			// when
-			enrollmentService.confirm(student.getId(), enrollment.getId());
+			enrollmentService.confirmEnrollment(student.getId(), enrollment.getId());
 
 			// then
 			Enrollment confirmedEnrollment = enrollmentRepository.findById(enrollment.getId()).orElseThrow();
@@ -168,7 +168,7 @@ class EnrollmentServiceTest {
 			Long nonExistentEnrollmentId = 999L;
 
 			// when & then
-			assertThatThrownBy(() -> enrollmentService.confirm(student.getId(), nonExistentEnrollmentId))
+			assertThatThrownBy(() -> enrollmentService.confirmEnrollment(student.getId(), nonExistentEnrollmentId))
 				.isInstanceOf(BusinessException.class)
 				.hasFieldOrPropertyWithValue("errorCode", EnrollmentError.NOT_FOUND_ENROLLMENT);
 		}
@@ -183,7 +183,7 @@ class EnrollmentServiceTest {
 			);
 
 			// when & then
-			assertThatThrownBy(() -> enrollmentService.confirm(otherStudent.getId(), enrollment.getId()))
+			assertThatThrownBy(() -> enrollmentService.confirmEnrollment(otherStudent.getId(), enrollment.getId()))
 				.isInstanceOf(BusinessException.class)
 				.hasFieldOrPropertyWithValue("errorCode", EnrollmentError.NOT_OWNER);
 		}
@@ -198,7 +198,7 @@ class EnrollmentServiceTest {
 			enrollment.confirm(); // 수강 확정 처리
 
 			// when & then
-			assertThatThrownBy(() -> enrollmentService.confirm(student.getId(), enrollment.getId()))
+			assertThatThrownBy(() -> enrollmentService.confirmEnrollment(student.getId(), enrollment.getId()))
 				.isInstanceOf(DomainException.class)
 				.hasFieldOrPropertyWithValue("errorCode", EnrollmentError.CANNOT_CONFIRM);
 		}
