@@ -12,11 +12,14 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.course.domain.Course;
 import com.example.course.domain.CourseStatus;
 import com.example.course.dto.request.CourseCreateRequest;
+import com.example.course.dto.response.CourseListResponse;
 import com.example.course.dto.response.CourseResponse;
 import com.example.course.exception.CourseError;
 import com.example.course.repository.CourseRepository;
@@ -384,6 +387,91 @@ class CourseServiceTest {
 			assertThatThrownBy(() -> courseService.closeCourse(teacher.getId(), nonExistentCourseId))
 				.isInstanceOf(BusinessException.class)
 				.hasFieldOrPropertyWithValue("errorCode", CourseError.NOT_FOUND_COURSE);
+		}
+	}
+
+	@Nested
+	@DisplayName("강의 목록 조회 테스트")
+	class GetCoursesTest {
+
+		@Test
+		@DisplayName("status가 null이면 OPEN/CLOSED 강의만 조회되고 DRAFT는 제외된다")
+		void getCourses_visible_excludesDraft() {
+			// given
+			Course draftCourse = saveCourse("DRAFT 강의");
+			Course openCourse = saveCourse("OPEN 강의");
+			openCourse.open();
+			Course closedCourse = saveCourse("CLOSED 강의");
+			closedCourse.open();
+			closedCourse.close();
+
+			// when
+			Slice<CourseListResponse> result = courseService.getCourses(null, PageRequest.of(0, 20));
+
+			// then
+			assertThat(result.getContent())
+				.extracting(CourseListResponse::id)
+				.containsExactlyInAnyOrder(openCourse.getId(), closedCourse.getId())
+				.doesNotContain(draftCourse.getId());
+		}
+
+		@Test
+		@DisplayName("status가 OPEN이면 OPEN 강의만 조회된다")
+		void getCourses_filterByOpen() {
+			// given
+			Course draftCourse = saveCourse("DRAFT 강의");
+			Course openCourse = saveCourse("OPEN 강의");
+			openCourse.open();
+			Course closedCourse = saveCourse("CLOSED 강의");
+			closedCourse.open();
+			closedCourse.close();
+
+			// when
+			Slice<CourseListResponse> result = courseService.getCourses(CourseStatus.OPEN, PageRequest.of(0, 20));
+
+			// then
+			assertThat(result.getContent())
+				.extracting(CourseListResponse::id)
+				.containsExactly(openCourse.getId())
+				.doesNotContain(draftCourse.getId(), closedCourse.getId());
+		}
+
+		@Test
+		@DisplayName("status가 DRAFT이면 조회할 수 없다")
+		void getCourses_fail_draftStatus() {
+			// when & then
+			assertThatThrownBy(() -> courseService.getCourses(CourseStatus.DRAFT, PageRequest.of(0, 20)))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", CourseError.INVALID_STATUS_FILTER);
+		}
+
+		@Test
+		@DisplayName("페이지 크기를 초과하는 강의가 있으면 hasNext가 true이다")
+		void getCourses_hasNext() {
+			// given
+			for (int i = 0; i < 3; i++) {
+				Course course = saveCourse("강의 " + i);
+				course.open();
+			}
+
+			// when
+			Slice<CourseListResponse> result = courseService.getCourses(CourseStatus.OPEN, PageRequest.of(0, 2));
+
+			// then
+			assertThat(result.getContent()).hasSize(2);
+			assertThat(result.hasNext()).isTrue();
+		}
+
+		private Course saveCourse(String title) {
+			return courseRepository.save(Course.create(
+				teacher.getId(),
+				title,
+				"설명",
+				new BigDecimal("50000"),
+				30,
+				LocalDate.of(2026, 6, 1),
+				LocalDate.of(2026, 8, 31)
+			));
 		}
 	}
 }
