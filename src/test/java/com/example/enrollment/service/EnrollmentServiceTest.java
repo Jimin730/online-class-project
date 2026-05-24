@@ -18,9 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.course.domain.Course;
 import com.example.course.exception.CourseError;
 import com.example.course.repository.CourseRepository;
+import com.example.enrollment.domain.Enrollment;
 import com.example.enrollment.domain.EnrollmentStatus;
 import com.example.enrollment.dto.response.EnrollmentCreateResponse;
 import com.example.enrollment.exception.EnrollmentError;
+import com.example.enrollment.repository.EnrollmentRepository;
 import com.example.global.exception.BusinessException;
 import com.example.global.exception.DomainException;
 import com.example.user.domain.Role;
@@ -39,6 +41,9 @@ class EnrollmentServiceTest {
 
 	@Autowired
 	private CourseRepository courseRepository;
+
+	@Autowired
+	private EnrollmentRepository enrollmentRepository;
 
 	private User teacher;
 	private User student;
@@ -132,6 +137,70 @@ class EnrollmentServiceTest {
 			assertThatThrownBy(() -> enrollmentService.createEnrollment(student.getId(), course1.getId()))
 				.isInstanceOf(DomainException.class)
 				.hasFieldOrPropertyWithValue("errorCode", CourseError.NOT_OPEN);
+		}
+	}
+
+	@Nested
+	@DisplayName("수강신청 확정 테스트")
+	class ConfirmTest {
+
+		@Test
+		@DisplayName("본인의 PENDING 상태 수강신청을 확정한다")
+		void confirm_success() {
+			// given
+			Enrollment enrollment = enrollmentRepository.save(
+				Enrollment.create(student.getId(), course1.getId())
+			);
+
+			// when
+			enrollmentService.confirm(student.getId(), enrollment.getId());
+
+			// then
+			Enrollment confirmedEnrollment = enrollmentRepository.findById(enrollment.getId()).orElseThrow();
+			assertThat(confirmedEnrollment.getStatus()).isEqualTo(EnrollmentStatus.CONFIRMED);
+			assertThat(confirmedEnrollment.getConfirmedAt()).isNotNull();
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 수강신청 ID로 확정 시 실패한다")
+		void confirm_fail_notFound() {
+			// given
+			Long nonExistentEnrollmentId = 999L;
+
+			// when & then
+			assertThatThrownBy(() -> enrollmentService.confirm(student.getId(), nonExistentEnrollmentId))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", EnrollmentError.NOT_FOUND_ENROLLMENT);
+		}
+
+		@Test
+		@DisplayName("본인의 수강신청이 아니면 확정할 수 없다")
+		void confirm_fail_notOwner() {
+			// given
+			User otherStudent = userRepository.save(User.create("이학생", "student2@email.com", Role.STUDENT));
+			Enrollment enrollment = enrollmentRepository.save(
+				Enrollment.create(student.getId(), course1.getId())
+			);
+
+			// when & then
+			assertThatThrownBy(() -> enrollmentService.confirm(otherStudent.getId(), enrollment.getId()))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", EnrollmentError.NOT_OWNER);
+		}
+
+		@Test
+		@DisplayName("PENDING 상태가 아닌 수강신청은 확정할 수 없다")
+		void confirm_fail_notPending() {
+			// given
+			Enrollment enrollment = enrollmentRepository.save(
+				Enrollment.create(student.getId(), course1.getId())
+			);
+			enrollment.confirm(); // 수강 확정 처리
+
+			// when & then
+			assertThatThrownBy(() -> enrollmentService.confirm(student.getId(), enrollment.getId()))
+				.isInstanceOf(DomainException.class)
+				.hasFieldOrPropertyWithValue("errorCode", EnrollmentError.CANNOT_CONFIRM);
 		}
 	}
 }
