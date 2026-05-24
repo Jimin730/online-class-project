@@ -17,7 +17,8 @@ public enum CourseError implements ErrorCode {
 	NOT_FOUND_COURSE("강의를 찾을 수 없습니다", HttpStatus.NOT_FOUND, "C_004"),
 	NOT_COURSE_OWNER("강의 소유자만 변경이 가능합니다", HttpStatus.FORBIDDEN, "C_005"),
 	NOT_OPEN("모집중인 강의가 아닙니다", HttpStatus.BAD_REQUEST, "C_006"),
-	CAPACITY_EXCEEDED("정원이 초과되었습니다", HttpStatus.BAD_REQUEST, "C_007");
+	CAPACITY_EXCEEDED("정원이 초과되었습니다", HttpStatus.BAD_REQUEST, "C_007"),
+	INVALID_STATUS_FILTER("해당 상태로는 조회할 수 없습니다", HttpStatus.BAD_REQUEST, "C_008");
 
 	private final String message;
 	private final HttpStatus status;

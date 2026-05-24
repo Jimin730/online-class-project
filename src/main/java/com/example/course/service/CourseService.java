@@ -1,10 +1,15 @@
 package com.example.course.service;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.course.domain.Course;
+import com.example.course.domain.CourseStatus;
 import com.example.course.dto.request.CourseCreateRequest;
+import com.example.course.dto.response.CourseListResponse;
 import com.example.course.dto.response.CourseResponse;
 import com.example.course.exception.CourseError;
 import com.example.course.repository.CourseRepository;
@@ -55,6 +60,24 @@ public class CourseService {
 			.orElseThrow(() -> new BusinessException(CourseError.NOT_FOUND_COURSE));
 
 		return CourseResponse.from(course);
+	}
+
+	@Transactional(readOnly = true)
+	public Slice<CourseListResponse> getCourses(CourseStatus status, Pageable pageable) {
+		Slice<Course> courses;
+
+		if (status == null) {
+			Pageable page = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+			courses = courseRepository.findVisibleCourses(page);
+
+		} else if (status == CourseStatus.DRAFT) { // 초안 조회 불가
+			throw new BusinessException(CourseError.INVALID_STATUS_FILTER);
+
+		} else {
+			courses = courseRepository.findAllByStatus(status, pageable);
+		}
+
+		return courses.map(CourseListResponse::from);
 	}
 
 	public void openCourse(Long teacherId, Long courseId) {
