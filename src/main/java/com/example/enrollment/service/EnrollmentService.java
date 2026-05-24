@@ -73,6 +73,7 @@ public class EnrollmentService {
 		course.release();
 	}
 
+	@Transactional(readOnly = true)
 	public Slice<EnrollmentResponse> getMyEnrollments(Long studentId, Pageable pageable) {
 		Slice<Enrollment> slice = enrollmentRepository.findAllByStudentId(studentId, pageable);
 
