@@ -77,6 +77,22 @@ public class Course extends BaseEntity {
 		return course;
 	}
 
+	public void enroll() {
+		if (this.status != CourseStatus.OPEN) {
+			throw new DomainException(CourseError.NOT_OPEN);
+		}
+		if (this.enrolledCount >= this.capacity) {
+			throw new DomainException(CourseError.CAPACITY_EXCEEDED);
+		}
+		this.enrolledCount++;
+	}
+
+	public void release() {
+		if (this.enrolledCount > 0) {
+			this.enrolledCount--;
+		}
+	}
+
 	public void open() {
 		if(this.status == CourseStatus.OPEN) {
 			throw new DomainException(CourseError.ALREADY_OPENED);
