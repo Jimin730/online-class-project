@@ -1,5 +1,12 @@
 package com.example.enrollment.service;
 
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,6 +16,7 @@ import com.example.course.repository.CourseRepository;
 import com.example.enrollment.domain.Enrollment;
 import com.example.enrollment.domain.EnrollmentStatus;
 import com.example.enrollment.dto.response.EnrollmentCreateResponse;
+import com.example.enrollment.dto.response.EnrollmentResponse;
 import com.example.enrollment.exception.EnrollmentError;
 import com.example.enrollment.repository.EnrollmentRepository;
 import com.example.global.exception.BusinessException;
@@ -63,6 +71,20 @@ public class EnrollmentService {
 
 		enrollment.cancel();
 		course.release();
+	}
+
+	public Slice<EnrollmentResponse> getMyEnrollments(Long studentId, Pageable pageable) {
+		Slice<Enrollment> slice = enrollmentRepository.findAllByStudentId(studentId, pageable);
+
+		// courseId 모아 Course 일괄 조회
+		Set<Long> courseIds = slice.getContent().stream()
+			.map(Enrollment::getCourseId)
+			.collect(Collectors.toSet());
+
+		Map<Long, Course> courseMap = courseRepository.findAllById(courseIds).stream()
+			.collect(Collectors.toMap(Course::getId, Function.identity()));
+
+		return slice.map(e -> EnrollmentResponse.of(courseMap.get(e.getCourseId()), e));
 	}
 
 	private Enrollment findOwnedBy(Long studentId, Long enrollmentId) {
