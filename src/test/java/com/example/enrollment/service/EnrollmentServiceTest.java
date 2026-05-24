@@ -203,4 +203,73 @@ class EnrollmentServiceTest {
 				.hasFieldOrPropertyWithValue("errorCode", EnrollmentError.CANNOT_CONFIRM);
 		}
 	}
+
+	@Nested
+	@DisplayName("수강신청 취소 테스트")
+	class CancelTest {
+
+		@Test
+		@DisplayName("본인의 수강신청을 취소하면 강의 신청 인원이 감소한다")
+		void cancel_success() {
+			// given
+			course1.open();
+			course1.enroll();
+			Enrollment enrollment = enrollmentRepository.save(
+				Enrollment.create(student.getId(), course1.getId())
+			);
+
+			// when
+			enrollmentService.cancelEnrollment(student.getId(), enrollment.getId());
+
+			// then
+			Enrollment cancelledEnrollment = enrollmentRepository.findById(enrollment.getId()).orElseThrow();
+			assertThat(cancelledEnrollment.getStatus()).isEqualTo(EnrollmentStatus.CANCELLED);
+			assertThat(cancelledEnrollment.getCancelledAt()).isNotNull();
+
+			Course updatedCourse = courseRepository.findById(course1.getId()).orElseThrow();
+			assertThat(updatedCourse.getEnrolledCount()).isZero();
+		}
+
+		@Test
+		@DisplayName("존재하지 않는 수강신청 ID로 취소 시 실패한다")
+		void cancel_fail_notFound() {
+			// given
+			Long nonExistentEnrollmentId = 999L;
+
+			// when & then
+			assertThatThrownBy(() -> enrollmentService.cancelEnrollment(student.getId(), nonExistentEnrollmentId))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", EnrollmentError.NOT_FOUND_ENROLLMENT);
+		}
+
+		@Test
+		@DisplayName("본인의 수강신청이 아니면 취소할 수 없다")
+		void cancel_fail_notOwner() {
+			// given
+			User otherStudent = userRepository.save(User.create("이학생", "student2@email.com", Role.STUDENT));
+			Enrollment enrollment = enrollmentRepository.save(
+				Enrollment.create(student.getId(), course1.getId())
+			);
+
+			// when & then
+			assertThatThrownBy(() -> enrollmentService.cancelEnrollment(otherStudent.getId(), enrollment.getId()))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", EnrollmentError.NOT_OWNER);
+		}
+
+		@Test
+		@DisplayName("이미 취소된 수강신청은 다시 취소할 수 없다")
+		void cancel_fail_alreadyCancelled() {
+			// given
+			Enrollment enrollment = enrollmentRepository.save(
+				Enrollment.create(student.getId(), course1.getId())
+			);
+			enrollment.cancel();
+
+			// when & then
+			assertThatThrownBy(() -> enrollmentService.cancelEnrollment(student.getId(), enrollment.getId()))
+				.isInstanceOf(DomainException.class)
+				.hasFieldOrPropertyWithValue("errorCode", EnrollmentError.CANNOT_CANCEL);
+		}
+	}
 }
