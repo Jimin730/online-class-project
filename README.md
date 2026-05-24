@@ -180,6 +180,11 @@ Content-Type: application/json
 **응답 (201 Created)**
 - Location 헤더에 생성된 강의 URI 포함
 
+```http
+HTTP/1.1 201 Created
+Location: /api/courses/1
+```
+
 #### 2. 강의 목록 조회
 
 ```http
@@ -189,10 +194,61 @@ GET /api/courses?status=OPEN&size=20&page=0
 - `status` (선택): `OPEN` 또는 `CLOSED` — 미지정 시 둘 다 노출 (OPEN 우선)
 - `?status=DRAFT` 요청 시 400 응답
 
+**응답 (200 OK)**
+
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "teacherId": 1,
+      "title": "스프링 부트 입문",
+      "price": 50000,
+      "capacity": 30,
+      "enrolledCount": 5,
+      "startDate": "2026-06-01",
+      "endDate": "2026-08-31",
+      "status": "OPEN"
+    },
+    {
+      "id": 2,
+      "teacherId": 1,
+      "title": "JPA 심화",
+      "price": 80000,
+      "capacity": 20,
+      "enrolledCount": 12,
+      "startDate": "2026-07-01",
+      "endDate": "2026-09-30",
+      "status": "OPEN"
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "hasNext": false
+}
+```
+
 #### 3. 강의 상세 조회
 
 ```http
 GET /api/courses/{courseId}
+```
+
+**응답 (200 OK)**
+
+```json
+{
+  "id": 1,
+  "teacherId": 1,
+  "title": "스프링 부트 입문",
+  "description": "백엔드 개발 기초",
+  "price": 50000,
+  "capacity": 30,
+  "enrolledCount": 5,
+  "startDate": "2026-06-01",
+  "endDate": "2026-08-31",
+  "status": "OPEN"
+}
 ```
 
 #### 4. 강의 모집 시작
@@ -202,12 +258,18 @@ POST /api/courses/{courseId}/open
 X-User-Id: 1
 ```
 
+**응답 (204 No Content)** — 본문 없음
+
 #### 5. 강의 모집 마감
 
 ```http
 POST /api/courses/{courseId}/close
 X-User-Id: 1
 ```
+
+**응답 (204 No Content)** — 본문 없음
+
+<br>
 
 ### 수강신청 (Enrollment)
 
@@ -219,7 +281,18 @@ X-User-Id: 2
 Content-Type: application/json
 
 {
-  "courseId": 1
+    "courseId": 26
+}
+```
+
+**응답 (201 Created)**
+
+```json
+{
+  "id": 15,
+  "courseId": 26,
+  "status": "PENDING",
+  "enrolledAt": "2026-05-25T00:22:12.674777"
 }
 ```
 
@@ -230,12 +303,16 @@ POST /api/enrollments/{enrollmentId}/confirm
 X-User-Id: 2
 ```
 
+**응답 (204 No Content)** — 본문 없음
+
 #### 3. 수강 취소
 
 ```http
 POST /api/enrollments/{enrollmentId}/cancel
 X-User-Id: 2
 ```
+
+**응답 (204 No Content)** — 본문 없음
 
 #### 4. 내 수강신청 목록
 
@@ -244,7 +321,7 @@ GET /api/enrollments/my?size=20&page=0
 X-User-Id: 2
 ```
 
-**응답 예시**
+**응답**
 
 ```json
 {
