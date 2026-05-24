@@ -1,6 +1,7 @@
 package com.example.enrollment.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.course.domain.Course;
 import com.example.course.exception.CourseError;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class EnrollmentService {
 
 	private final CourseRepository courseRepository;
@@ -46,4 +48,21 @@ public class EnrollmentService {
 
 		return EnrollmentCreateResponse.from(enrollment);
 	}
+
+	public void confirm(Long studentId, Long enrollmentId) {
+		Enrollment enrollment = findOwnedBy(studentId, enrollmentId);
+		enrollment.confirm();
+	}
+
+	private Enrollment findOwnedBy(Long studentId, Long enrollmentId) {
+		Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
+			.orElseThrow(() -> new BusinessException(EnrollmentError.NOT_FOUND_ENROLLMENT));
+
+		if (!enrollment.getStudentId().equals(studentId)) {
+			throw new BusinessException(EnrollmentError.NOT_OWNER);
+		}
+
+		return enrollment;
+	}
+
 }

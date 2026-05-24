@@ -14,7 +14,9 @@ public enum EnrollmentError implements ErrorCode {
 	CANNOT_CONFIRM("수강 신청 대기 상태에서만 확정할 수 있습니다", HttpStatus.BAD_REQUEST, "E_001"),
 	CANNOT_CANCEL("확정 또는 대기 상태의 수강만 취소할 수 있습니다", HttpStatus.BAD_REQUEST, "E_002"),
 	ALREADY_ENROLLED("이미 신청된 강의입니다", HttpStatus.BAD_REQUEST, "E_003"),
-	CANNOT_ENROLL_OWN_COURSE("본인이 개설한 강의에는 수강 신청할 수 없습니다", HttpStatus.BAD_REQUEST, "E_004");
+	CANNOT_ENROLL_OWN_COURSE("본인이 개설한 강의에는 수강 신청할 수 없습니다", HttpStatus.BAD_REQUEST, "E_004"),
+	NOT_FOUND_ENROLLMENT("수강 신청 내역을 찾을 수 없습니다", HttpStatus.NOT_FOUND, "E_005"),
+	NOT_OWNER("본인의 신청 내역만 처리할 수 있습니다", HttpStatus.FORBIDDEN, "E_006");
 
 	private final String message;
 	private final HttpStatus status;

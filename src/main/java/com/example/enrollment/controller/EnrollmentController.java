@@ -2,6 +2,7 @@ package com.example.enrollment.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -30,4 +31,14 @@ public class EnrollmentController {
 		EnrollmentCreateResponse response = enrollmentService.createEnrollment(studentId, request.courseId());
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
+
+	@PostMapping("/{enrollmentId}/confirm")
+	public ResponseEntity<Void> confirm(
+		@RequestHeader("X-User-Id") Long studentId,
+		@PathVariable Long enrollmentId
+	) {
+		enrollmentService.confirm(studentId, enrollmentId);
+		return ResponseEntity.noContent().build();
+	}
+
 }
