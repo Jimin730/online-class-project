@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.course.domain.Course;
@@ -21,6 +23,7 @@ import com.example.course.repository.CourseRepository;
 import com.example.enrollment.domain.Enrollment;
 import com.example.enrollment.domain.EnrollmentStatus;
 import com.example.enrollment.dto.response.EnrollmentCreateResponse;
+import com.example.enrollment.dto.response.EnrollmentResponse;
 import com.example.enrollment.exception.EnrollmentError;
 import com.example.enrollment.repository.EnrollmentRepository;
 import com.example.global.exception.BusinessException;
@@ -270,6 +273,93 @@ class EnrollmentServiceTest {
 			assertThatThrownBy(() -> enrollmentService.cancelEnrollment(student.getId(), enrollment.getId()))
 				.isInstanceOf(DomainException.class)
 				.hasFieldOrPropertyWithValue("errorCode", EnrollmentError.CANNOT_CANCEL);
+		}
+	}
+
+	@Nested
+	@DisplayName("내 수강신청 목록 조회 테스트")
+	class GetMyEnrollmentsTest {
+
+		@Test
+		@DisplayName("본인의 수강신청 목록만 강의 정보와 함께 조회된다")
+		void getMyEnrollments_success() {
+			// given
+			Course course2 = courseRepository.save(Course.create(
+				teacher.getId(),
+				"JPA 심화",
+				"JPA 심화 강의",
+				new BigDecimal("70000"),
+				20,
+				LocalDate.of(2026, 7, 1),
+				LocalDate.of(2026, 9, 30)
+			));
+			enrollmentRepository.saveAll(List.of(
+				Enrollment.create(student.getId(), course1.getId()),
+				Enrollment.create(student.getId(), course2.getId())
+			));
+
+			User otherStudent = userRepository.save(User.create("이학생", "student2@email.com", Role.STUDENT));
+			enrollmentRepository.save(Enrollment.create(otherStudent.getId(), course1.getId()));
+
+			// when
+			Slice<EnrollmentResponse> result = enrollmentService.getMyEnrollments(student.getId(), PageRequest.of(0, 10));
+
+			// then
+			assertThat(result.getContent()).hasSize(2);
+			assertThat(result.getContent())
+				.extracting(r -> r.course().id())
+				.containsExactlyInAnyOrder(course1.getId(), course2.getId());
+			assertThat(result.getContent())
+				.allSatisfy(r -> {
+					assertThat(r.status()).isEqualTo(EnrollmentStatus.PENDING);
+					assertThat(r.enrolledAt()).isNotNull();
+					assertThat(r.confirmedAt()).isNull();
+					assertThat(r.cancelledAt()).isNull();
+					assertThat(r.course()).isNotNull();
+				});
+		}
+
+		@Test
+		@DisplayName("페이지 크기를 초과하는 수강신청이 있으면 hasNext가 true이다")
+		void getMyEnrollments_hasNext() {
+			// given
+			Course course2 = Course.create(
+				teacher.getId(), "강의2", "설명", new BigDecimal("10000"),
+				10, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 31)
+			);
+
+			Course course3 = Course.create(
+				teacher.getId(), "강의3", "설명", new BigDecimal("10000"),
+				10, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 31)
+			);
+
+			courseRepository.saveAll(List.of(course2, course3));
+			enrollmentRepository.saveAll(List.of(
+				Enrollment.create(student.getId(), course1.getId()),
+				Enrollment.create(student.getId(), course2.getId()),
+				Enrollment.create(student.getId(), course3.getId())
+			));
+
+			// when
+			Slice<EnrollmentResponse> result = enrollmentService.getMyEnrollments(student.getId(), PageRequest.of(0, 2));
+
+			// then
+			assertThat(result.getContent()).hasSize(2);
+			assertThat(result.hasNext()).isTrue();
+		}
+
+		@Test
+		@DisplayName("수강신청이 없으면 빈 결과를 반환한다")
+		void getMyEnrollments_empty() {
+			// given
+			// 아무 enrollment도 생성하지 않음
+
+			// when
+			Slice<EnrollmentResponse> result = enrollmentService.getMyEnrollments(student.getId(), PageRequest.of(0, 10));
+
+			// then
+			assertThat(result.getContent()).isEmpty();
+			assertThat(result.hasNext()).isFalse();
 		}
 	}
 }
