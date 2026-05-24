@@ -54,6 +54,17 @@ public class EnrollmentService {
 		enrollment.confirm();
 	}
 
+	public void cancelEnrollment(Long studentId, Long enrollmentId) {
+		Enrollment enrollment = findOwnedBy(studentId, enrollmentId);
+
+		// 자리 반납을 위해 Course 락 획득 - 데이터 정합성 우려
+		Course course = courseRepository.findByIdForUpdate(enrollment.getCourseId())
+			.orElseThrow(() -> new BusinessException(CourseError.NOT_FOUND_COURSE));
+
+		enrollment.cancel();
+		course.release();
+	}
+
 	private Enrollment findOwnedBy(Long studentId, Long enrollmentId) {
 		Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
 			.orElseThrow(() -> new BusinessException(EnrollmentError.NOT_FOUND_ENROLLMENT));

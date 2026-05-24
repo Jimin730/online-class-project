@@ -41,4 +41,13 @@ public class EnrollmentController {
 		return ResponseEntity.noContent().build();
 	}
 
+	@PostMapping("/{enrollmentId}/cancel")
+	public ResponseEntity<Void> cancel(
+		@RequestHeader("X-User-Id") Long studentId,
+		@PathVariable Long enrollmentId
+	) {
+		enrollmentService.cancelEnrollment(studentId, enrollmentId);
+		return ResponseEntity.noContent().build();
+	}
+
 }
