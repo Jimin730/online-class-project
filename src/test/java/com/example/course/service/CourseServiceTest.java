@@ -223,8 +223,8 @@ class CourseServiceTest {
 		}
 
 		@Test
-		@DisplayName("이미 모집중인 강의를 다시 OPEN 시 실패한다")
-		void openCourse_fail_alreadyOpened() {
+		@DisplayName("DRAFT 상태가 아닌 강의를 OPEN 시 실패한다")
+		void openCourse_fail_notDraft() {
 			// given
 			Course course = courseRepository.save(Course.create(
 				teacher.getId(),
@@ -240,7 +240,7 @@ class CourseServiceTest {
 			// when & then
 			assertThatThrownBy(() -> courseService.openCourse(teacher.getId(), course.getId()))
 				.isInstanceOf(DomainException.class)
-				.hasFieldOrPropertyWithValue("errorCode", CourseError.ALREADY_OPENED);
+				.hasFieldOrPropertyWithValue("errorCode", CourseError.CANNOT_OPEN);
 		}
 
 		@Test

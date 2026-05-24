@@ -94,8 +94,8 @@ public class Course extends BaseEntity {
 	}
 
 	public void open() {
-		if(this.status == CourseStatus.OPEN) {
-			throw new DomainException(CourseError.ALREADY_OPENED);
+		if(this.status != CourseStatus.DRAFT) {
+			throw new DomainException(CourseError.CANNOT_OPEN);
 		}
 		this.status = CourseStatus.OPEN;
 	}
