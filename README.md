@@ -178,11 +178,10 @@ Content-Type: application/json
 ```
 
 **응답 (201 Created)**
-- Location 헤더에 생성된 강의 URI 포함
-
-```http
-HTTP/1.1 201 Created
-Location: /api/courses/1
+```json
+{
+  "courseId": 26
+}
 ```
 
 #### 2. 강의 목록 조회
